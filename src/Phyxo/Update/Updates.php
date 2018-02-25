@@ -34,7 +34,11 @@ class Updates
 
         foreach ($this->types as $type) {
             $typeClassName = sprintf('\Phyxo\%s\%s', ucfirst(substr($type, 0, -1)), ucfirst($type));
-            $this->$type = new $typeClassName($conn);
+            if ($type==='plugins') {
+                $this->$type = new $typeClassName($GLOBALS['services_container']);
+            } else {
+                $this->$type = new $typeClassName($conn);
+            }
         }
     }
 

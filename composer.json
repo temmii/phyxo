@@ -20,7 +20,8 @@
 		"tedivm/jshrink": "1.2.*",
 		"natxet/CssMin": "3.0.*",
 		"guzzlehttp/guzzle": "6.3.*",
-		"swiftmailer/swiftmailer": "6.0.*"
+		"swiftmailer/swiftmailer": "6.0.*",
+		"ccmbenchmark/ting": "^3.4"
 	},
 	"require-dev": {
 		"atoum/atoum": "3.*",

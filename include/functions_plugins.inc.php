@@ -292,12 +292,12 @@ function autoupdate_plugin(&$plugin) {
  * Loads all the registered plugins.
  */
 function load_plugins() {
-    global $conf, $pwg_loaded_plugins, $conn;
+    global $conf, $pwg_loaded_plugins, $services_container;
 
     $pwg_loaded_plugins = array();
 
     if ($conf['enable_plugins']) {
-        $plugins = new \Phyxo\Plugin\Plugins($conn);
+        $plugins = new \Phyxo\Plugin\Plugins($services_container);
         $db_plugins = $plugins->getDbPlugins('active');
         foreach($db_plugins as $plugin) { // include main from a function to avoid using same function context
             load_plugin($plugin);

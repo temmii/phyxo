@@ -1,22 +1,13 @@
 <?php
-// +-----------------------------------------------------------------------+
-// | Phyxo - Another web based photo gallery                               |
-// | Copyright(C) 2014-2016 Nicolas Roudaire         http://www.phyxo.net/ |
-// +-----------------------------------------------------------------------+
-// | This program is free software; you can redistribute it and/or modify  |
-// | it under the terms of the GNU General Public License version 2 as     |
-// | published by the Free Software Foundation                             |
-// |                                                                       |
-// | This program is distributed in the hope that it will be useful, but   |
-// | WITHOUT ANY WARRANTY; without even the implied warranty of            |
-// | MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU      |
-// | General Public License for more details.                              |
-// |                                                                       |
-// | You should have received a copy of the GNU General Public License     |
-// | along with this program; if not, write to the Free Software           |
-// | Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,            |
-// | MA 02110-1301 USA.                                                    |
-// +-----------------------------------------------------------------------+
+/*
+ * This file is part of Phyxo package
+ *
+ * Copyright(c) Nicolas Roudaire  https://www.phyxo.net/
+ * Licensed under the GPL version 2.0 license.
+ *
+ * For the full copyright and license information, please view the LICENSE
+ * file that was distributed with this source code.
+ */
 
 namespace Phyxo\Plugin;
 
@@ -30,9 +21,9 @@ class Plugins extends Extensions
     private $default_plugins = array();
     private static $plugins_root_path = PHPWG_PLUGINS_PATH;
 
-    public function __construct(\Phyxo\DBLayer\DBLayer $conn, $plugins_root_path=PHPWG_PLUGINS_PATH) {
+    public function __construct(\CCMBenchmark\Ting\ContainerInterface $services, $plugins_root_path=PHPWG_PLUGINS_PATH) {
         self::$plugins_root_path = $plugins_root_path;
-        $this->conn = $conn;
+        $this->services = $services;
     }
 
     /**
@@ -94,9 +85,7 @@ class Plugins extends Extensions
             $plugin_maintain->install($this->fs_plugins[$plugin_id]['version'], $errors);
 
             if (empty($errors)) {
-                $query = 'INSERT INTO '. PLUGINS_TABLE .' (id,version)';
-                $query .= ' VALUES (\''. $plugin_id .'\', \''. $this->fs_plugins[$plugin_id]['version'] .'\');';
-                $this->conn->db_query($query);
+                $this->services->get('RepositoryFactory')->get(\Phyxo\Repository\Plugin::class)->add($plugin_id, $this->fs_plugins[$plugin_id]['version']);
             }
             break;
 
@@ -111,9 +100,7 @@ class Plugins extends Extensions
                 $plugin_maintain = self::build_maintain_class($plugin_id);
                 $plugin_maintain->update($previous_version, $new_version, $errors);
                 if ($new_version != 'auto') {
-                    $query = 'UPDATE '. PLUGINS_TABLE .' SET version=\''. $new_version .'\'';
-                    $query .= ' WHERE id=\''. $plugin_id .'\'';
-                    $this->conn->db_query($query);
+                    $this->services->get('RepositoryFactory')->get(\Phyxo\Repository\Plugin::class)->updateVersion($plugin_id, $new_version);
                 }
             } catch (\Exception $e) {
                 $errors[] = $e->getMessage();
@@ -134,9 +121,7 @@ class Plugins extends Extensions
             }
 
             if (empty($errors)) {
-                $query = 'UPDATE '. PLUGINS_TABLE .' SET state=\'active\'';
-                $query .= ' WHERE id=\''. $plugin_id .'\';';
-                $this->conn->db_query($query);
+                $this->services->get('RepositoryFactory')->get(\Phyxo\Repository\Plugin::class)->changeState($plugin_id, 'active');
             }
             break;
 
@@ -145,10 +130,7 @@ class Plugins extends Extensions
                 break;
             }
 
-            $query = 'UPDATE '. PLUGINS_TABLE .' SET state=\'inactive\'';
-            $query .= ' WHERE id=\''. $plugin_id .'\';';
-            $this->conn->db_query($query);
-
+            $this->services->get('RepositoryFactory')->get(\Phyxo\Repository\Plugin::class)->changeState($plugin_id, 'inactive');
             $plugin_maintain->deactivate();
             break;
 
@@ -160,8 +142,7 @@ class Plugins extends Extensions
                 $this->performAction('deactivate', $plugin_id);
             }
 
-            $query = 'DELETE FROM '. PLUGINS_TABLE .' WHERE id=\''. $plugin_id .'\';';
-            $this->conn->db_query($query);
+            $this->services->get('RepositoryFactory')->get(\Phyxo\Repository\Plugin::class)->delete($plugin_id);
 
             $plugin_maintain->uninstall();
             break;
@@ -269,20 +250,28 @@ class Plugins extends Extensions
      */
     public function getDbPlugins($state='', $id='') {
         if (!$this->db_plugins_retrieved) {
-            $query = 'SELECT id, state, version FROM '.PLUGINS_TABLE;
-            $clauses = array();
+            $clauses = [];
 
             if (!empty($state)) {
-                $clauses[] = 'state=\''.$state.'\'';
+                $clauses['State'] = $state;
             }
             if (!empty($id)) {
-                $clauses[] = 'id = \''.$id.'\'';
-            }
-            if (count($clauses)) {
-                $query .= ' WHERE '. implode(' AND ', $clauses);
+                $clauses['Id'] = $id;
             }
 
-            $this->db_plugins = $this->conn->query2array($query, 'id');
+            $this->db_plugins = [];
+            if (empty($clauses)) {
+                $collection = $this->services->get('RepositoryFactory')->get(\Phyxo\Repository\Plugin::class)->getAll();
+            } else {
+                $collection = $this->services->get('RepositoryFactory')->get(\Phyxo\Repository\Plugin::class)->getBy($clauses);
+            }
+            foreach ($collection as $plugin) {
+                $this->db_plugins[$plugin->getId()] = [
+                    'id' => $plugin->getId(),
+                    'state' => $plugin->getState(),
+                    'version' => $plugin->getVersion(),
+                ];
+            }
             $this->db_plugins_retrieved = true;
         }
 

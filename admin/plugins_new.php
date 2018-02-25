@@ -15,7 +15,7 @@ if (!defined("PLUGINS_BASE_URL")) {
 
 use Phyxo\Plugin\Plugins;
 
-$plugins = new Plugins($conn);
+$plugins = new Plugins($services_container);
 
 //------------------------------------------------------automatic installation
 if (isset($_GET['revision']) and isset($_GET['extension'])) {

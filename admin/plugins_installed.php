@@ -35,7 +35,7 @@ if (isset($_GET['show_details'])) {
 $pwg_token = get_pwg_token();
 $action_url = PLUGINS_BASE_URL.'&amp;section=installed&amp;plugin='.'%s'.'&amp;pwg_token='.$pwg_token;
 
-$plugins = new Plugins($conn);
+$plugins = new Plugins($services_container);
 
 //--------------------------------------------------perform requested actions
 if (isset($_GET['action']) and isset($_GET['plugin'])) {
