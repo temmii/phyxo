@@ -22,7 +22,7 @@ class Updates
     private $versions = array(), $version = array();
     private $types = array();
 
-    public function __construct(\Phyxo\DBLayer\DBLayer $conn=null, $page='updates') {
+    public function __construct(\CCMBenchmark\Ting\ContainerInterface $services, $page='updates') {
         $this->types = array('plugins', 'themes', 'languages');
 
         if (in_array($page, $this->types)) {
@@ -34,11 +34,7 @@ class Updates
 
         foreach ($this->types as $type) {
             $typeClassName = sprintf('\Phyxo\%s\%s', ucfirst(substr($type, 0, -1)), ucfirst($type));
-            if ($type==='plugins') {
-                $this->$type = new $typeClassName($GLOBALS['services_container']);
-            } else {
-                $this->$type = new $typeClassName($conn);
-            }
+            $this->$type = new $typeClassName($services);
         }
     }
 

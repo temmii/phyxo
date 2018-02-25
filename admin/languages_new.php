@@ -15,7 +15,7 @@ if (!defined("LANGUAGES_BASE_URL")) {
 
 use Phyxo\Language\Languages;
 
-$languages = new Languages($conn);
+$languages = new Languages($services_container);
 
 // +-----------------------------------------------------------------------+
 // |                           setup check                                 |

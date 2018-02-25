@@ -15,7 +15,7 @@ if (!defined("THEMES_BASE_URL")) {
 
 use Phyxo\Theme\Themes;
 
-$themes = new Themes($conn);
+$themes = new Themes($services_container);
 
 // +-----------------------------------------------------------------------+
 // |                           setup check                                 |

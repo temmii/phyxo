@@ -1,22 +1,13 @@
 <?php
-// +-----------------------------------------------------------------------+
-// | Phyxo - Another web based photo gallery                               |
-// | Copyright(C) 2014-2016 Nicolas Roudaire         http://www.phyxo.net/ |
-// +-----------------------------------------------------------------------+
-// | This program is free software; you can redistribute it and/or modify  |
-// | it under the terms of the GNU General Public License version 2 as     |
-// | published by the Free Software Foundation                             |
-// |                                                                       |
-// | This program is distributed in the hope that it will be useful, but   |
-// | WITHOUT ANY WARRANTY; without even the implied warranty of            |
-// | MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU      |
-// | General Public License for more details.                              |
-// |                                                                       |
-// | You should have received a copy of the GNU General Public License     |
-// | along with this program; if not, write to the Free Software           |
-// | Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,            |
-// | MA 02110-1301 USA.                                                    |
-// +-----------------------------------------------------------------------+
+/*
+ * This file is part of Phyxo package
+ *
+ * Copyright(c) Nicolas Roudaire  https://www.phyxo.net/
+ * Licensed under the GPL version 2.0 license.
+ *
+ * For the full copyright and license information, please view the LICENSE
+ * file that was distributed with this source code.
+ */
 
 namespace Phyxo\Theme;
 
@@ -28,8 +19,8 @@ class Themes extends Extensions
     private $fs_themes = array(), $db_themes = array(), $server_themes = array();
     private $fs_themes_retrieved = false, $db_themes_retrieved = false, $server_themes_retrieved = false;
 
-    public function __construct(\Phyxo\DBLayer\DBLayer $conn) {
-        $this->conn = $conn;
+    public function __construct(\CCMBenchmark\Ting\ContainerInterface $services) {
+        $this->services = $services;
     }
 
     /**
@@ -107,15 +98,7 @@ class Themes extends Extensions
             $theme_maintain->activate($this->fs_themes[$theme_id]['version'], $errors);
 
             if (empty($errors)) {
-                $query = 'INSERT INTO '.THEMES_TABLE;
-                $query .= ' (id, version, name) VALUES(\''.$theme_id.'\',';
-                $query .= ' \''.$this->fs_themes[$theme_id]['version'].'\',';
-                $query .= ' \''.$this->fs_themes[$theme_id]['name'].'\');';
-                $this->conn->db_query($query);
-
-                if ($this->fs_themes[$theme_id]['mobile']) {
-                    \conf_update_param('mobile_theme', $theme_id);
-                }
+                $this->services->get('RepositoryFactory')->get(\Phyxo\Repository\Theme::class)->add($theme_id, $this->fs_themes[$theme_id]['name'], $this->fs_themes[$theme_id]['version']);
             }
             break;
 
@@ -135,22 +118,18 @@ class Themes extends Extensions
                 // find a random theme to replace
                 $new_theme = null;
 
-                $query = 'SELECT id FROM '.THEMES_TABLE;
-                $query .= ' WHERE id != \''.$theme_id.'\';';
-                $result = $this->conn->db_query($query);
-                if ($this->conn->db_num_rows($result) == 0) {
+                $collection = $this->services->get('RepositoryFactory')->get(\Phyxo\Repository\Theme::class)->findOneNotEqual($theme_id);
+                if (count($collection)===0) {
                     $new_theme = 'default';
                 } else {
-                    list($new_theme) = $this->conn->db_fetch_row($result);
+                    $new_theme = $collection[0]->getId();
                 }
 
                 $this->setDefaultTheme($new_theme);
             }
 
             $theme_maintain->deactivate();
-
-            $query = 'DELETE FROM '.THEMES_TABLE.' WHERE id= \''.$theme_id.'\';';
-            $this->conn->db_query($query);
+            $collection = $this->services->get('RepositoryFactory')->get(\Phyxo\Repository\Theme::class)->delete($theme_id);
 
             if ($this->fs_themes[$theme_id]['mobile']) {
                 \conf_update_param('mobile_theme', '');
@@ -222,7 +201,7 @@ class Themes extends Extensions
     }
 
     public function setDefaultTheme($theme_id) {
-        global $conf, $services;
+        global $conf, $services, $conn;
 
         // first we need to know which users are using the current default theme
         $default_theme = $services['users']->getDefaultTheme();
@@ -231,7 +210,7 @@ class Themes extends Extensions
         $query .= ' WHERE theme = \''.$default_theme.'\';';
         $user_ids = array_unique(
             array_merge(
-                $this->conn->query2array($query, null, 'user_id'),
+                $conn->query2array($query, null, 'user_id'),
                 array($conf['guest_id'], $conf['default_user_id'])
             )
         );
@@ -241,25 +220,28 @@ class Themes extends Extensions
 
         $query = 'UPDATE '.USER_INFOS_TABLE.' SET theme = \''.$theme_id.'\'';
         $query .= ' WHERE user_id '.$this->conn->in($user_ids);
-        $this->conn->db_query($query);
+        $conn->db_query($query);
     }
 
     public function getDbThemes($id='') {
         if (!$this->db_themes_retrieved) {
-            $query = 'SELECT id, version, name FROM '.THEMES_TABLE;
+            $clauses = [];
 
-            $clauses = array();
             if (!empty($id)) {
-                $clauses[] = 'id = \''.$id.'\'';
+                $clauses['Id'] = $id;
             }
-            if (count($clauses) > 0) {
-                $query .= ' WHERE '. implode(' AND ', $clauses);
+            $this->db_themes = [];
+            if (empty($clauses)) {
+                $collection = $this->services->get('RepositoryFactory')->get(\Phyxo\Repository\Theme::class)->getAll();
+            } else {
+                $collection = $this->services->get('RepositoryFactory')->get(\Phyxo\Repository\Theme::class)->getBy($clauses);
             }
-
-            $result = $this->conn->db_query($query);
-            $this->db_themes = array();
-            while ($row = $this->conn->db_fetch_assoc($result)) {
-                $this->db_themes[$row['id']] = $row;
+            foreach ($collection as $theme) {
+                $this->db_themes[$theme->getId()] = [
+                    'id' => $theme->getId(),
+                    'name' => $theme->getName(),
+                    'version' => $theme->getVersion(),
+                ];
             }
             $this->db_themes_retrieved = true;
         }
@@ -323,10 +305,10 @@ class Themes extends Extensions
                     $theme['parent'] = $val[1];
                 }
                 if (preg_match('/["\']activable["\'].*?(true|false)/i', $theme_data, $val)) {
-                    $theme['activable'] = $this->conn->get_boolean($val[1]);
+                    $theme['activable'] = $val[1];
                 }
                 if (preg_match('/["\']mobile["\'].*?(true|false)/i', $theme_data, $val)) {
-                    $theme['mobile'] = $this->conn->get_boolean($val[1]);
+                    $theme['mobile'] = $val[1];
                 }
 
                 // screenshot

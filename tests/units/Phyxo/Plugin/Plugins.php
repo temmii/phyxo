@@ -1,29 +1,19 @@
 <?php
-// +-----------------------------------------------------------------------+
-// | Phyxo - Another web based photo gallery                               |
-// | Copyright(C) 2014-2016 Nicolas Roudaire         http://www.phyxo.net/ |
-// +-----------------------------------------------------------------------+
-// | This program is free software; you can redistribute it and/or modify  |
-// | it under the terms of the GNU General Public License version 2 as     |
-// | published by the Free Software Foundation                             |
-// |                                                                       |
-// | This program is distributed in the hope that it will be useful, but   |
-// | WITHOUT ANY WARRANTY; without even the implied warranty of            |
-// | MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU      |
-// | General Public License for more details.                              |
-// |                                                                       |
-// | You should have received a copy of the GNU General Public License     |
-// | along with this program; if not, write to the Free Software           |
-// | Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,            |
-// | MA 02110-1301 USA.                                                    |
-// +-----------------------------------------------------------------------+
+/*
+ * This file is part of Phyxo package
+ *
+ * Copyright(c) Nicolas Roudaire  https://www.phyxo.net/
+ * Licensed under the GPL version 2.0 license.
+ *
+ * For the full copyright and license information, please view the LICENSE
+ * file that was distributed with this source code.
+ */
 
 namespace tests\units\Phyxo\Plugin;
 
 require_once __DIR__ . '/../../bootstrap.php';
 
 use atoum;
-use Phyxo\DBLayer\pgsqlConnection;
 use org\bovigo\vfs\vfsStream;
 use org\bovigo\vfs\vfsStreamWrapper;
 
@@ -48,11 +38,8 @@ class Plugins extends atoum
     }
 
     public function testFsPlugins() {
-        $controller = new \atoum\mock\controller();
-		$controller->__construct = function() {};
-
-		$conn = new \mock\Phyxo\DBLayer\pgsqlConnection('', '', '', '', $controller);
-        $plugins =  new \mock\Phyxo\Plugin\Plugins($conn, PHPWG_TMP_PATH.'/plugins/');
+        $services = new \CCMBenchmark\Ting\Services();
+        $plugins =  new \mock\Phyxo\Plugin\Plugins($services, PHPWG_TMP_PATH.'/plugins/');
 
         $this
             ->array($plugins->getFsPlugins())
@@ -60,11 +47,8 @@ class Plugins extends atoum
     }
 
     public function testSortPlugins($sort_type, $order) {
-        $controller = new \atoum\mock\controller();
-		$controller->__construct = function() {};
-
-		$conn = new \mock\Phyxo\DBLayer\pgsqlConnection('', '', '', '', $controller);
-        $plugins =  new \mock\Phyxo\Plugin\Plugins($conn, PHPWG_TMP_PATH.'/plugins/');
+        $services = new \CCMBenchmark\Ting\Services();
+        $plugins =  new \mock\Phyxo\Plugin\Plugins($services, PHPWG_TMP_PATH.'/plugins/');
 
         $plugins->sortFsPlugins($sort_type);
 
@@ -77,11 +61,8 @@ class Plugins extends atoum
     }
 
     public function testExtractPluginWithEmptyOrInvalidArchive() {
-        $controller = new \atoum\mock\controller();
-		$controller->__construct = function() {};
-
-		$conn = new \mock\Phyxo\DBLayer\pgsqlConnection('', '', '', '', $controller);
-        $plugins =  new \mock\Phyxo\Plugin\Plugins($conn, PHPWG_TMP_PATH.'/plugins/');
+        $services = new \CCMBenchmark\Ting\Services();
+        $plugins =  new \mock\Phyxo\Plugin\Plugins($services, PHPWG_TMP_PATH.'/plugins/');
         $this->calling($plugins)->download = function() {
             // copy archive in right place
         };
@@ -95,11 +76,8 @@ class Plugins extends atoum
     }
 
     public function testExtractPlugin() {
-        $controller = new \atoum\mock\controller();
-		$controller->__construct = function() {};
-
-		$conn = new \mock\Phyxo\DBLayer\pgsqlConnection('', '', '', '', $controller);
-        $plugins =  new \mock\Phyxo\Plugin\Plugins($conn, PHPWG_TMP_PATH.'/plugins/');
+        $services = new \CCMBenchmark\Ting\Services();
+        $plugins =  new \mock\Phyxo\Plugin\Plugins($services, PHPWG_TMP_PATH.'/plugins/');
         $this->calling($plugins)->download = function($get_data, $archive) {
             // copy archive in right place
             copy(PHPWG_ZIP_PATH . '/myPlugin1-0.1.0.zip', $archive);
@@ -128,11 +106,8 @@ class Plugins extends atoum
     }
 
     public function testExtractPluginWithUpdate() {
-        $controller = new \atoum\mock\controller();
-		$controller->__construct = function() {};
-
-		$conn = new \mock\Phyxo\DBLayer\pgsqlConnection('', '', '', '', $controller);
-        $plugins =  new \mock\Phyxo\Plugin\Plugins($conn, PHPWG_TMP_PATH.'/plugins/');
+        $services = new \CCMBenchmark\Ting\Services();
+        $plugins =  new \mock\Phyxo\Plugin\Plugins($services, PHPWG_TMP_PATH.'/plugins/');
 
         $this->calling($plugins)->download = function($get_data, $archive) {
             // copy archive in right place

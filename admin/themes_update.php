@@ -15,7 +15,7 @@ if (!defined("THEMES_BASE_URL")) {
 
 use Phyxo\Update\Updates;
 
-$autoupdate = new Updates($conn, 'themes');
+$autoupdate = new Updates($services_container, 'themes');
 
 $show_reset = false;
 $conf['updates_ignored'] = json_decode($conf['updates_ignored'], true);

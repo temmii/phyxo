@@ -15,7 +15,7 @@ if (!defined("LANGUAGES_BASE_URL")) {
 
 use Phyxo\Language\Languages;
 
-$languages = new Languages($conn);
+$languages = new Languages($services_container);
 
 //--------------------------------------------------perform requested actions
 if (isset($_GET['action']) and isset($_GET['language'])) {

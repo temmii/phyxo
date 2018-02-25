@@ -15,7 +15,7 @@ if (!defined("LANGUAGES_BASE_URL")) {
 
 use Phyxo\Update\Updates;
 
-$autoupdate = new Updates($conn, 'languages');
+$autoupdate = new Updates($services_container, 'languages');
 
 $show_reset = false;
 $conf['updates_ignored'] = json_decode($conf['updates_ignored'], true);

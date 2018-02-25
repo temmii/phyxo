@@ -1,22 +1,13 @@
 <?php
-// +-----------------------------------------------------------------------+
-// | Phyxo - Another web based photo gallery                               |
-// | Copyright(C) 2014-2016 Nicolas Roudaire         http://www.phyxo.net/ |
-// +-----------------------------------------------------------------------+
-// | This program is free software; you can redistribute it and/or modify  |
-// | it under the terms of the GNU General Public License version 2 as     |
-// | published by the Free Software Foundation                             |
-// |                                                                       |
-// | This program is distributed in the hope that it will be useful, but   |
-// | WITHOUT ANY WARRANTY; without even the implied warranty of            |
-// | MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU      |
-// | General Public License for more details.                              |
-// |                                                                       |
-// | You should have received a copy of the GNU General Public License     |
-// | along with this program; if not, write to the Free Software           |
-// | Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,            |
-// | MA 02110-1301 USA.                                                    |
-// +-----------------------------------------------------------------------+
+/*
+ * This file is part of Phyxo package
+ *
+ * Copyright(c) Nicolas Roudaire  https://www.phyxo.net/
+ * Licensed under the GPL version 2.0 license.
+ *
+ * For the full copyright and license information, please view the LICENSE
+ * file that was distributed with this source code.
+ */
 
 namespace Phyxo\Language;
 
@@ -27,10 +18,8 @@ class Languages extends Extensions
     private $fs_languages = array(), $db_languages = array(), $server_languages = array();
     private $fs_languages_retrieved = false, $db_languages_retrieved = false, $server_languages_retrieved = false;
 
-    public function __construct(\Phyxo\DBLayer\DBLayer $conn=null, $target_charset=null) {
-        if (!is_null($conn)) {
-            $this->conn = $conn;
-        }
+    public function __construct(\CCMBenchmark\Ting\ContainerInterface $services, $target_charset=null) {
+        $this->services = $services;
     }
 
     public function setConnection(\Phyxo\DBLayer\DBLayer $conn) {
@@ -44,7 +33,7 @@ class Languages extends Extensions
      * @param array - errors
      */
     function performAction($action, $language_id) {
-        global $conf, $services;
+        global $conf, $services, $conn;
 
         if (!$this->db_languages_retrieved) {
             $this->getDbLanguages();
@@ -67,11 +56,7 @@ class Languages extends Extensions
                 break;
             }
 
-            $query = 'INSERT INTO '.LANGUAGES_TABLE.' (id, version, name)';
-            $query .= ' VALUES(\''.$language_id.'\',';
-            $query .= ' \''.$this->fs_languages[$language_id]['version'].'\',';
-            $query .= ' \''.$this->fs_languages[$language_id]['name'].'\');';
-            $this->conn->db_query($query);
+            $this->services->get('RepositoryFactory')->get(\Phyxo\Repository\Language::class)->add($language_id, $this->fs_languages[$language_id]['name'], $this->fs_languages[$language_id]['version']);
             break;
 
         case 'deactivate':
@@ -84,9 +69,7 @@ class Languages extends Extensions
                 $errors[] = 'CANNOT DEACTIVATE - LANGUAGE IS DEFAULT LANGUAGE';
                 break;
             }
-
-            $query = 'DELETE FROM '.LANGUAGES_TABLE.' WHERE id= \''.$language_id.'\'';
-            $this->conn->db_query($query);
+            $this->services->get('RepositoryFactory')->get(\Phyxo\Repository\Language::class)->delete($language_id);
             break;
 
         case 'delete':
@@ -102,7 +85,7 @@ class Languages extends Extensions
             // Set default language to user who are using this language
             $query = 'UPDATE '.USER_INFOS_TABLE.' SET language = \''.$services['users']->getDefaultLanguage().'\'';
             $query .= ' WHERE language = \''.$language_id.'\';';
-            $this->conn->db_query($query);
+            $conn->db_query($query);
 
             deltree(PHPWG_ROOT_PATH.'language/'.$language_id, PHPWG_ROOT_PATH.'language/trash');
             break;
@@ -110,7 +93,7 @@ class Languages extends Extensions
         case 'set_default':
             $query = 'UPDATE '.USER_INFOS_TABLE.' SET language = \''.$language_id.'\'';
             $query .= ' WHERE user_id '.$this->conn->in(array($conf['default_user_id'], $conf['guest_id']));
-            $this->conn->db_query($query);
+            $conn->db_query($query);
             break;
         }
 
@@ -183,13 +166,15 @@ class Languages extends Extensions
 
     public function getDbLanguages() {
         if (!$this->db_languages_retrieved) {
-            $query = 'SELECT id, name FROM '.LANGUAGES_TABLE.' ORDER BY name ASC;';
-            $result = $this->conn->db_query($query);
-
-            while ($row = $this->conn->db_fetch_assoc($result)) {
-                $this->db_languages[$row['id']] = $row['name'];
+            $collection = $this->services->get('RepositoryFactory')->get(\Phyxo\Repository\Language::class)->getAll();
+            $this->db_languages = [];
+            foreach ($collection as $language) {
+                $this->db_languages[$language->getId()] = [
+                    'id' => $language->getId(),
+                    'name' => $language->getName(),
+                    'version' => $language->getVersion(),
+                ];
             }
-
             $this->db_languages_retrieved = true;
         }
 

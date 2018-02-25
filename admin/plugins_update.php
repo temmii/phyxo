@@ -18,7 +18,7 @@ use Phyxo\Update\Updates;
 $show_reset = false;
 $conf['updates_ignored'] = json_decode($conf['updates_ignored'], true);
 
-$autoupdate = new Updates($conn, $page['page']);
+$autoupdate = new Updates($services_container, $page['page']);
 try {
     $autoupdate->getServerExtensions();
     $server_plugins = $autoupdate->getType('plugins')->getServerPlugins();
